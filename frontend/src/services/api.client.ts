@@ -8,7 +8,8 @@ import {
   TriageResponse, 
   ChatAudioResponse, 
   InsightResponse, 
-  EncyclopediaResponse 
+  EncyclopediaResponse,
+  RadarResponse
 } from '../types/models';
 
 const apiClient = axios.create({
@@ -30,6 +31,14 @@ const getUserId = async (): Promise<string> => {
 export const submitTriage = async (symptoms: string): Promise<TriageResponse> => {
   const userId = await getUserId();
   const { data } = await apiClient.post<TriageResponse>('/triage', { symptoms, userId });
+  return data;
+};
+
+// ─── Radar API ─────────────────────────────────
+
+export const getRadarAnalysis = async (city: string, state: string, symptoms?: string): Promise<RadarResponse> => {
+  const userId = await getUserId();
+  const { data } = await apiClient.post<RadarResponse>('/radar', { city, state, symptoms, userId });
   return data;
 };
 

@@ -8,48 +8,9 @@ const fadeUp = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
-const logs = [
-  {
-    id: 1,
-    date: 'May 22, 2026',
-    time: '09:15 AM',
-    symptoms: 'Mild headache, fatigue',
-    riskLevel: 'Low',
-    categories: ['Tension Headache'],
-  },
-  {
-    id: 2,
-    date: 'May 20, 2026',
-    time: '02:30 PM',
-    symptoms: 'Sore throat, mild fever, body aches',
-    riskLevel: 'Moderate',
-    categories: ['Viral Infection', 'Seasonal Flu'],
-  },
-  {
-    id: 3,
-    date: 'May 18, 2026',
-    time: '11:00 AM',
-    symptoms: 'Persistent cough, chest tightness',
-    riskLevel: 'Moderate',
-    categories: ['Upper Respiratory Infection'],
-  },
-  {
-    id: 4,
-    date: 'May 15, 2026',
-    time: '08:45 AM',
-    symptoms: 'Stomach discomfort after meals',
-    riskLevel: 'Low',
-    categories: ['Indigestion'],
-  },
-  {
-    id: 5,
-    date: 'May 12, 2026',
-    time: '04:20 PM',
-    symptoms: 'Dizziness, slight nausea',
-    riskLevel: 'Low',
-    categories: ['Dehydration'],
-  },
-];
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 const riskConfig: Record<string, { icon: typeof CheckCircle; color: string; bg: string }> = {
   Low: { icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
@@ -58,6 +19,35 @@ const riskConfig: Record<string, { icon: typeof CheckCircle; color: string; bg: 
 };
 
 const HealthLogsView = () => {
+  const { user } = useAuth();
+  const [logs, setLogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user?.id) {
+      const fetchLogs = async () => {
+        const { data, error } = await supabase
+          .from('health_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (!error && data) {
+          setLogs(data.map(log => {
+            const d = new Date(log.created_at);
+            return {
+              id: log.log_id,
+              date: d.toLocaleDateString(),
+              time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              symptoms: log.symptoms,
+              riskLevel: log.risk_level,
+              categories: [],
+            };
+          }));
+        }
+      };
+      fetchLogs();
+    }
+  }, [user]);
   return (
     <motion.div
       initial="hidden"
@@ -130,7 +120,7 @@ const HealthLogsView = () => {
                   </div>
                 </div>
                 <div className="hidden sm:flex flex-wrap gap-1.5">
-                  {log.categories.map((cat, i) => (
+                  {log.categories.map((cat: string, i: number) => (
                     <span
                       key={i}
                       className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary/10 text-primary"

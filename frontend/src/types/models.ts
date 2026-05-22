@@ -15,6 +15,19 @@ export interface TriageResponse {
   possibleCategories: string[];
 }
 
+export interface RadarRequest {
+  city: string;
+  state: string;
+  symptoms?: string;
+  userId?: string;
+}
+
+export interface RadarResponse {
+  riskLevel: RiskLevel;
+  primaryRecommendation: string;
+  suspectedLocalThreat: string | null;
+}
+
 export interface ChatAudioResponse {
   transcribedText: string;
   geminiResponse: string;

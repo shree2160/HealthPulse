@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Shield, Palette, Globe, LogOut } from 'lucide-react';
+import { User, Bell, Shield, Palette, Globe, LogOut, Loader2, Save } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import PageHeader from '../components/ui/PageHeader';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -9,6 +12,61 @@ const fadeUp = {
 };
 
 const SettingsView = () => {
+  const { user, signOut } = useAuth();
+  
+  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
+  const [age, setAge] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+
+  useEffect(() => {
+    if (user?.id) {
+      setFullName(user.user_metadata?.full_name || '');
+      // Fetch user profile data (like age) from the public.users table
+      supabase
+        .from('users')
+        .select('age')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (data && !error && data.age) {
+            setAge(data.age.toString());
+          }
+        });
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    setSaveMessage('');
+
+    try {
+      // 1. Update Auth Metadata (Full Name)
+      if (fullName !== user.user_metadata?.full_name) {
+        await supabase.auth.updateUser({
+          data: { full_name: fullName }
+        });
+      }
+
+      // 2. Update Users Table (Age)
+      const ageNum = parseInt(age);
+      if (!isNaN(ageNum)) {
+        await supabase
+          .from('users')
+          .update({ age: ageNum, updated_at: new Date().toISOString() })
+          .eq('id', user.id);
+      }
+
+      setSaveMessage('Profile saved successfully!');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (err: any) {
+      setSaveMessage('Error saving profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <motion.div
       initial="hidden"
@@ -25,21 +83,42 @@ const SettingsView = () => {
       {/* Profile */}
       <motion.div variants={fadeUp}>
         <GlassCard hover={false} className="p-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center text-white shadow-lg">
-              <User className="w-7 h-7" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center text-white shadow-lg text-2xl font-bold">
+                {fullName ? fullName.charAt(0).toUpperCase() : <User className="w-7 h-7" />}
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-text-primary">
+                  {fullName || 'Health User'}
+                </h3>
+                <p className="text-sm text-text-secondary">{user?.email}</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-text-primary">Health User</h3>
-              <p className="text-sm text-text-secondary">user@healthpulse.ai</p>
-            </div>
+            <button 
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-xl font-semibold hover:bg-primary/20 transition-colors disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Changes
+            </button>
           </div>
+          
+          {saveMessage && (
+            <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${saveMessage.includes('Error') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+              {saveMessage}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-text-secondary mb-1">Full Name</label>
               <input
                 type="text"
-                defaultValue="Health User"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Enter your full name"
                 className="w-full rounded-xl bg-slate-50 border border-border px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors"
               />
             </div>
@@ -47,7 +126,9 @@ const SettingsView = () => {
               <label className="block text-xs font-semibold text-text-secondary mb-1">Age</label>
               <input
                 type="number"
-                defaultValue={28}
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="Enter your age"
                 className="w-full rounded-xl bg-slate-50 border border-border px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors"
               />
             </div>
@@ -82,7 +163,10 @@ const SettingsView = () => {
 
       {/* Sign out */}
       <motion.div variants={fadeUp}>
-        <button className="flex items-center gap-2 px-5 py-3 rounded-full border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors">
+        <button 
+          onClick={() => signOut()}
+          className="flex items-center gap-2 px-5 py-3 rounded-full border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
+        >
           <LogOut className="w-4 h-4" />
           Sign Out
         </button>

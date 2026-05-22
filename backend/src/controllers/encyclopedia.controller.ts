@@ -3,7 +3,7 @@
 // =============================================
 
 import { Request, Response, NextFunction } from 'express';
-import { geminiService } from '../services/gemini.service';
+import { openRouterService as aiService } from '../services/openrouter.service';
 import { EncyclopediaResponse } from '../types/api.types';
 import { AppError } from '../middleware/errorHandler';
 
@@ -22,7 +22,7 @@ export const getEncyclopediaEntry = async (
     // Sanitize and limit query length
     const sanitizedQuery = query.trim().substring(0, 200);
 
-    const entry: EncyclopediaResponse = await geminiService.getEncyclopediaEntry(sanitizedQuery);
+    const entry: EncyclopediaResponse = await aiService.getEncyclopediaEntry(sanitizedQuery);
 
     res.json(entry);
   } catch (error) {
