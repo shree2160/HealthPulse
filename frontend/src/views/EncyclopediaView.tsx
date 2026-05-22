@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, ArrowRight, BookOpen } from 'lucide-react';
+import { Search, ArrowRight, BookOpen, AlertCircle } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import PageHeader from '../components/ui/PageHeader';
+import { searchEncyclopedia } from '../services/api.client';
 
 const diseaseCards = [
   { name: 'Diabetes', desc: 'A chronic condition affecting blood sugar regulation and insulin production.' },
@@ -29,13 +30,14 @@ const EncyclopediaView = () => {
     if (!query.trim()) return;
 
     setIsSearching(true);
-    setTimeout(() => {
-      setResult({
-        disease: query,
-        summary: `${query} is a medical condition that affects many individuals worldwide. Early detection and proper management are essential for positive outcomes.`,
-        symptoms: ['Fever', 'Cough', 'Fatigue', 'Headache'],
-        prevention: ['Wash hands frequently', 'Maintain a balanced diet', 'Exercise regularly', 'Get vaccinated if applicable'],
-      });
+    setError(null);
+    try {
+      const data = await searchEncyclopedia(query);
+      setResult(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Failed to search disease database. Please check if backend is running.');
+    } finally {
       setIsSearching(false);
     }
   };
@@ -71,8 +73,18 @@ const EncyclopediaView = () => {
         </form>
       </motion.div>
 
+      {/* Error Alert */}
+      {error && (
+        <motion.div variants={fadeUp}>
+          <div className="bg-danger/10 border border-danger/20 text-danger p-4 rounded-xl flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <p className="text-sm">{error}</p>
+          </div>
+        </motion.div>
+      )}
+
       {/* Search Result */}
-      {result && (
+      {result && !error && (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <GlassCard hover={false} className="p-8">
             <h2 className="text-2xl font-bold text-primary capitalize mb-3">{result.disease}</h2>

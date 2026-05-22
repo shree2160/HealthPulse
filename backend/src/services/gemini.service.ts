@@ -12,9 +12,9 @@ class GeminiService {
   // Model fallback chain — if the primary model's quota is exhausted,
   // fall back to the next one automatically.
   private static readonly MODEL_CHAIN = [
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-2.0-flash-lite',
+    'Gemini 2.5 Flash',
+    'Gemini 2.5 Flash Lite',
+    'Gemini 3.1 Flash Lite',
   ];
 
   // Lazy initialization

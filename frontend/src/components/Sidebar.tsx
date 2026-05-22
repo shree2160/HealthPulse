@@ -10,10 +10,12 @@ import {
   Mic,
   ClipboardList,
   Settings,
+  LogOut,
   ChevronLeft,
   ChevronRight,
   Activity,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -28,6 +30,7 @@ const navItems = [
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const { signOut } = useAuth();
 
   return (
     <motion.aside
@@ -96,6 +99,29 @@ const Sidebar = () => {
           </NavLink>
         ))}
       </nav>
+
+      {/* User Profile / Logout */}
+      <div className="px-3 pb-2 flex-shrink-0">
+        <button
+          onClick={signOut}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-danger hover:bg-danger/10 transition-colors"
+          title="Sign Out"
+        >
+          <LogOut className="w-5 h-5 flex-shrink-0" />
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                className="text-sm font-semibold whitespace-nowrap overflow-hidden"
+              >
+                Sign Out
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+      </div>
 
       {/* Collapse toggle */}
       <div className="px-3 pb-4 flex-shrink-0">
