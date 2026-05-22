@@ -6,23 +6,28 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { UserProfile, ChatHistoryRow, HealthLogRow, RiskLevel } from '../types/api.types';
 
 class SupabaseService {
-  private client: SupabaseClient;
+  private client: SupabaseClient | null = null;
 
-  constructor() {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  // Lazy initialization — only creates the client when first needed
+  private getClient(): SupabaseClient {
+    if (!this.client) {
+      const url = process.env.SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
-    if (!url || !key) {
-      throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY in environment variables');
+      if (!url || !key) {
+        throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY in environment variables');
+      }
+
+      this.client = createClient(url, key);
+      console.log('[Supabase] Service initialized successfully');
     }
-
-    this.client = createClient(url, key);
+    return this.client;
   }
 
   // ─── User Operations ───────────────────────
 
   async getUserProfile(userId: string): Promise<UserProfile | null> {
-    const { data, error } = await this.client
+    const { data, error } = await this.getClient()
       .from('users')
       .select('id, age, gender')
       .eq('id', userId)
@@ -39,7 +44,7 @@ class SupabaseService {
   // ─── Chat History Operations ────────────────
 
   async getChatHistory(sessionId: string, limit: number = 20): Promise<ChatHistoryRow[]> {
-    const { data, error } = await this.client
+    const { data, error } = await this.getClient()
       .from('chat_history')
       .select('*')
       .eq('session_id', sessionId)
@@ -60,7 +65,7 @@ class SupabaseService {
     role: 'user' | 'model',
     content: string
   ): Promise<void> {
-    const { error } = await this.client
+    const { error } = await this.getClient()
       .from('chat_history')
       .insert({
         session_id: sessionId,
@@ -82,7 +87,7 @@ class SupabaseService {
     symptoms: string,
     riskLevel: RiskLevel
   ): Promise<void> {
-    const { error } = await this.client
+    const { error } = await this.getClient()
       .from('health_logs')
       .insert({
         user_id: userId,
@@ -97,7 +102,7 @@ class SupabaseService {
   }
 
   async getHealthLogs(userId: string, limit: number = 10): Promise<HealthLogRow[]> {
-    const { data, error } = await this.client
+    const { data, error } = await this.getClient()
       .from('health_logs')
       .select('*')
       .eq('user_id', userId)

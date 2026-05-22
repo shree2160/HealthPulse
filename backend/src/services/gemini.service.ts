@@ -6,24 +6,82 @@ import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { TriageResponse, EncyclopediaResponse, UserProfile } from '../types/api.types';
 
 class GeminiService {
-  private genAI: GoogleGenerativeAI;
-  private model: GenerativeModel;
+  private genAI: GoogleGenerativeAI | null = null;
+  private model: GenerativeModel | null = null;
 
-  constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error('Missing GEMINI_API_KEY in environment variables');
+  // Model fallback chain — if the primary model's quota is exhausted,
+  // fall back to the next one automatically.
+  private static readonly MODEL_CHAIN = [
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-2.0-flash-lite',
+  ];
+
+  // Lazy initialization
+  private getModel(): GenerativeModel {
+    if (!this.model) {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('Missing GEMINI_API_KEY in environment variables');
+      }
+
+      this.genAI = new GoogleGenerativeAI(apiKey);
+
+      // Use env override or default to the first in chain
+      const modelName = process.env.GEMINI_MODEL || GeminiService.MODEL_CHAIN[0];
+      this.model = this.genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.9,
+          maxOutputTokens: 2048,
+        },
+      });
+      console.log(`[Gemini] Service initialized with model: ${modelName}`);
+    }
+    return this.model;
+  }
+
+  // Retry wrapper with exponential backoff and model fallback
+  private async generateWithRetry(prompt: string, maxRetries: number = 2): Promise<string> {
+    let lastError: any;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const model = this.getModel();
+        const result = await model.generateContent(prompt);
+        return result.response.text().trim();
+      } catch (error: any) {
+        lastError = error;
+        const is429 = error?.message?.includes('429') || error?.status === 429;
+
+        if (is429 && attempt < maxRetries) {
+          // Try switching to the next model in the fallback chain
+          const currentModelName = process.env.GEMINI_MODEL || GeminiService.MODEL_CHAIN[0];
+          const currentIdx = GeminiService.MODEL_CHAIN.indexOf(currentModelName);
+          const nextIdx = currentIdx + 1 + attempt;
+
+          if (nextIdx < GeminiService.MODEL_CHAIN.length && this.genAI) {
+            const fallbackModel = GeminiService.MODEL_CHAIN[nextIdx];
+            console.warn(`[Gemini] Rate limited on current model. Falling back to: ${fallbackModel}`);
+            this.model = this.genAI.getGenerativeModel({
+              model: fallbackModel,
+              generationConfig: { temperature: 0.7, topP: 0.9, maxOutputTokens: 2048 },
+            });
+          }
+
+          // Wait with exponential backoff
+          const waitMs = Math.min(2000 * Math.pow(2, attempt), 15000);
+          console.warn(`[Gemini] Retry ${attempt + 1}/${maxRetries} after ${waitMs}ms...`);
+          await new Promise(r => setTimeout(r, waitMs));
+          continue;
+        }
+
+        throw error;
+      }
     }
 
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      generationConfig: {
-        temperature: 0.7,
-        topP: 0.9,
-        maxOutputTokens: 2048,
-      },
-    });
+    throw lastError;
   }
 
   // ─── Triage Analysis ──────────────────────
@@ -56,8 +114,7 @@ Guidelines:
 
 Respond ONLY with the JSON object, no additional text.`;
 
-    const result = await this.model.generateContent(prompt);
-    const responseText = result.response.text().trim();
+    const responseText = await this.generateWithRetry(prompt);
 
     // Parse JSON from Gemini response (handle potential markdown wrapping)
     const jsonStr = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -104,8 +161,7 @@ Important rules:
 
     const fullPrompt = `${systemPrompt}\n\nConversation so far:\n${contextMessages}\n\nUser: ${userMessage}\n\nSahayak:`;
 
-    const result = await this.model.generateContent(fullPrompt);
-    return result.response.text().trim();
+    return await this.generateWithRetry(fullPrompt);
   }
 
   // ─── Daily Health Insight ─────────────────
@@ -119,8 +175,7 @@ Important rules:
 The tip should be practical, actionable, and relevant to modern lifestyles.
 Respond with just the tip text, no formatting or prefixes. Keep it under 2 sentences.`;
 
-    const result = await this.model.generateContent(prompt);
-    return result.response.text().trim();
+    return await this.generateWithRetry(prompt);
   }
 
   // ─── Disease Encyclopedia ─────────────────
@@ -139,8 +194,7 @@ Respond in valid JSON matching this exact schema:
 If the query is not a recognizable medical condition, still provide the best relevant health information you can.
 Respond ONLY with the JSON object, no additional text.`;
 
-    const result = await this.model.generateContent(prompt);
-    const responseText = result.response.text().trim();
+    const responseText = await this.generateWithRetry(prompt);
     const jsonStr = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
     try {
@@ -158,5 +212,6 @@ Respond ONLY with the JSON object, no additional text.`;
   }
 }
 
-// Export singleton instance
+// Export singleton — the class is lightweight; actual API client
+// is only created on first method call (after dotenv has loaded).
 export const geminiService = new GeminiService();

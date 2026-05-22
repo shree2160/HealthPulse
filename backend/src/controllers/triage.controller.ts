@@ -8,6 +8,9 @@ import { supabaseService } from '../services/supabase.service';
 import { TriageRequest, TriageResponse } from '../types/api.types';
 import { AppError } from '../middleware/errorHandler';
 
+// UUID v4 regex for validating user IDs before hitting Supabase
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const analyzeTriage = async (
   req: Request,
   res: Response,
@@ -25,8 +28,12 @@ export const analyzeTriage = async (
       throw new AppError(400, 'User ID is required');
     }
 
-    // Fetch user profile for personalized analysis
-    const userProfile = await supabaseService.getUserProfile(userId);
+    const isValidUUID = UUID_REGEX.test(userId);
+
+    // Fetch user profile for personalized analysis (skip if not a real UUID)
+    const userProfile = isValidUUID
+      ? await supabaseService.getUserProfile(userId)
+      : null;
 
     // Analyze symptoms with Gemini
     const triageResult: TriageResponse = await geminiService.analyzeSymptoms(
@@ -34,8 +41,10 @@ export const analyzeTriage = async (
       userProfile
     );
 
-    // Log the triage event in the database
-    await supabaseService.saveHealthLog(userId, symptoms, triageResult.riskLevel);
+    // Log the triage event in the database (skip if not a real UUID)
+    if (isValidUUID) {
+      await supabaseService.saveHealthLog(userId, symptoms, triageResult.riskLevel);
+    }
 
     // Send response
     res.json(triageResult);

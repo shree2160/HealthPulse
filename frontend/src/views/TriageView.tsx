@@ -1,25 +1,28 @@
 import { useState } from 'react';
 import { Activity } from 'lucide-react';
+import { submitTriage } from '../services/api.client';
 
 const TriageView = () => {
   const [symptoms, setSymptoms] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!symptoms.trim()) return;
     
     setIsSubmitting(true);
-    // Mock API call delay
-    setTimeout(() => {
-      setResult({
-        riskLevel: 'Moderate',
-        primaryRecommendation: 'Rest and drink plenty of fluids. Consult a doctor if symptoms persist or fever exceeds 102°F.',
-        possibleCategories: ['Viral Infection', 'Seasonal Flu']
-      });
+    setError(null);
+    try {
+      const data = await submitTriage(symptoms);
+      setResult(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Failed to connect to the medical analysis server. Please ensure the backend is running.');
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -59,7 +62,13 @@ const TriageView = () => {
         <div className="bg-charcoal rounded-2xl p-6 shadow-neumorphic border border-white/5 flex flex-col">
           <h2 className="text-xl font-semibold mb-4 text-slate-200">Assessment Result</h2>
           
-          {result ? (
+          {error ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-red-400 p-4 border border-red-500/20 bg-red-500/5 rounded-xl">
+              <Activity className="w-12 h-12 mb-2 text-red-500 animate-pulse" />
+              <p className="text-center font-semibold mb-1">Server Connection Issue</p>
+              <p className="text-center text-sm text-slate-400 max-w-xs">{error}</p>
+            </div>
+          ) : result ? (
             <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="bg-obsidian rounded-xl p-6 border border-white/10">
                 <div className="flex items-center justify-between mb-2">
