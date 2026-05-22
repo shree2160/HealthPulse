@@ -39,7 +39,8 @@ class WhisperService {
     wav.toBitDepth('32f');
     wav.toSampleRate(16000);
     
-    let audioData = wav.getSamples();
+    let audioData: any = wav.getSamples();
+    let finalAudioData: Float32Array;
     if (Array.isArray(audioData)) {
       if (audioData.length > 1) {
         // Merge channels if stereo
@@ -48,17 +49,17 @@ class WhisperService {
         for (let i = 0; i < SC; i++) {
           result[i] = (audioData[0][i] + audioData[1][i]) / 2;
         }
-        audioData = result;
+        finalAudioData = result;
       } else {
-        audioData = audioData[0];
+        finalAudioData = new Float32Array(audioData[0]);
       }
     } else {
-      audioData = audioData as Float32Array;
+      finalAudioData = new Float32Array(audioData as any);
     }
 
     console.log(`[Whisper] Transcribing with local model (${language})...`);
     // Pass to whisper
-    const result = await this.transcriber(audioData, {
+    const result = await this.transcriber(finalAudioData, {
       language: language === 'hi' ? 'hindi' : 'english',
       task: 'transcribe'
     });
@@ -86,7 +87,7 @@ class WhisperService {
           fs.unlinkSync(outputPath);
           resolve(outBuffer);
         })
-        .on('error', (err) => {
+        .on('error', (err: Error) => {
           // Cleanup
           if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
           if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
