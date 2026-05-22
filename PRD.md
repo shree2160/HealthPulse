@@ -1,5 +1,5 @@
 
-# PRD: Project Sahayak Health (Node/React Edition)
+# PRD: Project HealthPulse 
 
 **Objective:** Build a voice-enabled, AI-driven health assistant that provides symptom-based triage, risk analysis, and accessible medical education.
 **Target Audience:** General users needing quick, jargon-free health guidance before deciding to consult a doctor.

@@ -2,7 +2,7 @@
 This setup uses a monorepo style (both frontend and backend in one root folder), which makes it incredibly easy for your team to share TypeScript interfaces and run the entire project from a single IDE workspace.
 
 ```text
-sahayak-health/
+HealthPulse/
 │
 ├── backend/                              # Node.js + Express + TypeScript
 │   ├── .env                              # GEMINI_API_KEY, SUPABASE_URL, etc.

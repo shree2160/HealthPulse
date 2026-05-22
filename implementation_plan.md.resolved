@@ -1,0 +1,128 @@
+# 🏥 HealthPulse — Implementation Plan
+
+## Overview
+
+**Project:** Voice-enabled, AI-driven health assistant  
+**Architecture:** Monorepo (backend + frontend in one root)  
+**Team Split:**  
+- **You (Backend):** Node.js + Express + TypeScript, Gemini API, VOSK, Supabase  
+- **Friend (Frontend):** React 18 + Vite + TypeScript, Tailwind CSS, Framer Motion  
+
+---
+
+## Phase 1: Project Scaffolding & Shared Contracts *(You — Now)*
+
+| Task | Owner | Status |
+|------|-------|--------|
+| Create monorepo directory structure | You | 🔄 |
+| Initialize backend `package.json` + `tsconfig.json` | You | 🔄 |
+| Create placeholder frontend structure (for friend) | You | 🔄 |
+| Define shared TypeScript interfaces (`api.types.ts`) | You | 🔄 |
+| Write root `README.md` with setup instructions | You | 🔄 |
+
+## Phase 2: Backend Core *(You)*
+
+| Task | Owner | Priority |
+|------|-------|----------|
+| Express app entry point + middleware (CORS, JSON, multer) | You | P0 |
+| Supabase service (client init, user queries, chat history) | You | P0 |
+| Gemini service (model init, prompt templates, JSON mode) | You | P0 |
+| VOSK service (audio buffer → text transcription) | You | P1 |
+| TTS service (text → audio buffer) | You | P1 |
+| `POST /api/v1/triage` — full endpoint | You | P0 |
+| `POST /api/v1/chat/audio` — full endpoint | You | P1 |
+| `GET /api/v1/insights` — full endpoint | You | P0 |
+| `GET /api/v1/encyclopedia/:query` — disease search | You | P1 |
+| Error handling middleware | You | P0 |
+| `.env.example` with all required keys | You | P0 |
+
+## Phase 3: Frontend Core *(Friend)*
+
+| Task | Owner | Priority |
+|------|-------|----------|
+| Vite + React + TypeScript scaffold | Friend | P0 |
+| Tailwind config (obsidian, charcoal, cyber-orange) | Friend | P0 |
+| Dashboard layout + Sidebar | Friend | P0 |
+| Triage SymptomForm + RiskCard | Friend | P0 |
+| Chat feed + VoiceMicButton | Friend | P1 |
+| Disease encyclopedia search | Friend | P1 |
+| Daily health tip widget | Friend | P2 |
+| Auth context (Supabase) | Friend | P1 |
+
+## Phase 4: Integration & Polish *(Both)*
+
+| Task | Owner | Priority |
+|------|-------|----------|
+| Connect frontend API client to backend endpoints | Both | P0 |
+| End-to-end triage flow testing | Both | P0 |
+| Voice chat integration testing | Both | P1 |
+| Error states & loading skeletons | Friend | P1 |
+| Final README for judges | Both | P0 |
+
+---
+
+## API Contract Summary
+
+Your friend needs to know these endpoints to build the frontend:
+
+### `POST /api/v1/triage`
+```json
+// Request
+{ "symptoms": "string", "userId": "string" }
+
+// Response
+{
+  "riskLevel": "Low | Moderate | High",
+  "primaryRecommendation": "string",
+  "possibleCategories": ["string"]
+}
+```
+
+### `POST /api/v1/chat/audio`
+```
+// Request: multipart/form-data with audio blob
+// Response
+{
+  "transcribedText": "string",
+  "geminiResponse": "string",
+  "audioBase64": "string"
+}
+```
+
+### `GET /api/v1/insights`
+```json
+// Response
+{ "tip": "string" }
+```
+
+### `GET /api/v1/encyclopedia/:query`
+```json
+// Response
+{
+  "disease": "string",
+  "summary": "string",
+  "symptoms": ["string"],
+  "prevention": ["string"]
+}
+```
+
+---
+
+## Tech Stack Reference
+
+| Component | Package | Version |
+|-----------|---------|---------|
+| Runtime | Node.js | 20+ |
+| Framework | Express | ^4.21 |
+| Language | TypeScript | ^5.x |
+| AI | @google/generative-ai | ^0.21 |
+| STT | vosk | ^0.3 |
+| TTS | google-tts-api | ^2.0 |
+| Database | @supabase/supabase-js | ^2.x |
+| File Upload | multer | ^1.4 |
+| CORS | cors | ^2.8 |
+| Dev | tsx | ^4.x |
+| Dev | nodemon | ^3.x |
+
+> [!IMPORTANT]
+> The shared `api.types.ts` file is the **contract** between frontend and backend. Any changes here must be communicated to both developers.
