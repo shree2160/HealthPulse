@@ -1,28 +1,76 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Volume2, AlertCircle } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import PageHeader from '../components/ui/PageHeader';
+import { sendAudioChat } from '../services/api.client';
 
 const VoiceAssistantView = () => {
   const [isListening, setIsListening] = useState(false);
-  const [history, setHistory] = useState<{ command: string; response: string }[]>([
-    { command: 'What is my health score?', response: 'Your current health score is 87, which indicates good overall health.' },
-    { command: 'Give me a health tip', response: 'Stay hydrated by drinking at least 2 liters of water per day.' },
-  ]);
+  const [error, setError] = useState<string | null>(null);
+  const [sessionId] = useState(() => Math.random().toString(36).substring(7));
+  const [history, setHistory] = useState<{ command: string; response: string }[]>([]);
 
-  const toggleListening = () => {
-    if (!isListening) {
-      setIsListening(true);
-      setTimeout(() => {
-        setIsListening(false);
-        setHistory((prev) => [
-          { command: 'Check my risk level', response: 'Your current risk level is Low. No concerns detected.' },
-          ...prev,
-        ]);
-      }, 3000);
-    } else {
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const toggleListening = async () => {
+    if (isListening) {
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+      }
       setIsListening(false);
+    } else {
+      setError(null);
+      audioChunksRef.current = [];
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        mediaRecorderRef.current = mediaRecorder;
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach(track => track.stop());
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          if (audioBlob.size > 1000) {
+            await handleProcessAudio(audioBlob);
+          } else {
+            setError('Audio recorded was too short. Please try again.');
+          }
+        };
+
+        mediaRecorder.start();
+        setIsListening(true);
+      } catch (err: any) {
+        console.error(err);
+        setError('Microphone access denied or unavailable.');
+      }
+    }
+  };
+
+  const handleProcessAudio = async (audioBlob: Blob) => {
+    setError(null);
+    try {
+      const data = await sendAudioChat(audioBlob, sessionId, 'en');
+      
+      setHistory((prev) => [
+        { command: data.transcribedText, response: data.geminiResponse },
+        ...prev,
+      ]);
+
+      if (data.audioBase64) {
+        const audioUrl = `data:audio/mp3;base64,${data.audioBase64}`;
+        const audio = new Audio(audioUrl);
+        audio.play().catch(e => console.warn('Audio autoplay failed:', e));
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Failed to process voice query.');
     }
   };
 
@@ -84,6 +132,13 @@ const VoiceAssistantView = () => {
           'Tap the microphone to start'
         )}
       </p>
+
+      {error && (
+        <div className="mx-auto max-w-lg bg-danger/10 border border-danger/20 text-danger p-4 rounded-xl flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
 
       {/* Wave visualization placeholder */}
       {isListening && (

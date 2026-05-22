@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Mic, Upload, Sparkles, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import GradientButton from '../components/ui/GradientButton';
 import PageHeader from '../components/ui/PageHeader';
+import { submitTriage } from '../services/api.client';
 
 const suggestedSymptoms = [
   'Headache', 'Fever', 'Cough', 'Fatigue', 'Nausea',
@@ -19,22 +20,43 @@ const SymptomCheckerView = () => {
   const [symptoms, setSymptoms] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        setSymptoms((prev) => prev ? `${prev}\n\n${text}` : text);
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so the same file can be selected again if needed
+    e.target.value = '';
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!symptoms.trim()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      const data = await submitTriage(symptoms);
+      setResult(data);
+    } catch (err) {
+      console.error(err);
       setResult({
         riskLevel: 'Moderate',
-        confidence: 82,
-        primaryRecommendation:
-          'Rest and drink plenty of fluids. Consult a doctor if symptoms persist or fever exceeds 102 F.',
-        possibleCategories: ['Viral Infection', 'Seasonal Flu'],
+        confidence: 0,
+        primaryRecommendation: 'Failed to connect to the medical analysis server. Please try again.',
+        possibleCategories: ['Error'],
       });
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   const addSuggestion = (s: string) => {
@@ -108,8 +130,16 @@ const SymptomCheckerView = () => {
                 >
                   <Mic className="w-4 h-4" />
                 </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept=".txt,.md,.csv,.log" 
+                  onChange={handleFileUpload}
+                />
                 <button
                   type="button"
+                  onClick={() => fileInputRef.current?.click()}
                   className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-text-secondary hover:bg-primary/10 hover:text-primary transition-colors"
                   aria-label="Upload file"
                 >

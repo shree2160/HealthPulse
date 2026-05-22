@@ -3,7 +3,7 @@
 // =============================================
 
 import { Request, Response, NextFunction } from 'express';
-import { geminiService } from '../services/gemini.service';
+import { openRouterService as aiService } from '../services/openrouter.service';
 import { supabaseService } from '../services/supabase.service';
 import { InsightResponse } from '../types/api.types';
 
@@ -21,7 +21,7 @@ export const getDailyInsight = async (
       userProfile = await supabaseService.getUserProfile(userId);
     }
 
-    const tip = await geminiService.getDailyInsight(userProfile);
+    const tip = await aiService.getDailyInsight(userProfile);
 
     const response: InsightResponse = { tip };
     res.json(response);

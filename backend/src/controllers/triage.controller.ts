@@ -3,7 +3,7 @@
 // =============================================
 
 import { Request, Response, NextFunction } from 'express';
-import { geminiService } from '../services/gemini.service';
+import { openRouterService as aiService } from '../services/openrouter.service';
 import { supabaseService } from '../services/supabase.service';
 import { TriageRequest, TriageResponse } from '../types/api.types';
 import { AppError } from '../middleware/errorHandler';
@@ -35,8 +35,8 @@ export const analyzeTriage = async (
       ? await supabaseService.getUserProfile(userId)
       : null;
 
-    // Analyze symptoms with Gemini
-    const triageResult: TriageResponse = await geminiService.analyzeSymptoms(
+    // Analyze symptoms with OpenRouter
+    const triageResult: TriageResponse = await aiService.analyzeSymptoms(
       symptoms,
       userProfile
     );

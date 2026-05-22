@@ -9,17 +9,28 @@
     "start": "node dist/index.js",
     "lint": "eslint src/"
   },
-  "keywords": ["health", "ai", "gemini", "vosk", "triage"],
+  "keywords": [
+    "health",
+    "ai",
+    "gemini",
+    "vosk",
+    "triage"
+  ],
   "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@supabase/supabase-js": "^2.49.1",
+    "@xenova/transformers": "^2.17.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "ffmpeg-static": "^5.3.0",
+    "fluent-ffmpeg": "^2.1.3",
     "google-tts-api": "^2.0.2",
     "multer": "^1.4.5-lts.1",
-    "uuid": "^11.1.0"
+    "openai": "^6.39.0",
+    "uuid": "^11.1.0",
+    "wavefile": "^11.0.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -27,8 +38,8 @@
     "@types/multer": "^1.4.12",
     "@types/node": "^22.10.0",
     "@types/uuid": "^10.0.0",
+    "nodemon": "^3.1.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0",
-    "nodemon": "^3.1.0"
+    "typescript": "^5.7.0"
   }
 }

@@ -9,6 +9,7 @@ import { triageRouter } from './routes/triage.routes';
 import { chatRouter } from './routes/chat.routes';
 import { insightsRouter } from './routes/insights.routes';
 import { encyclopediaRouter } from './routes/encyclopedia.routes';
+import { radarRouter } from './routes/radar.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 // Load environment variables
@@ -44,6 +45,7 @@ app.use('/api/v1/triage', triageRouter);
 app.use('/api/v1/chat', chatRouter);
 app.use('/api/v1/insights', insightsRouter);
 app.use('/api/v1/encyclopedia', encyclopediaRouter);
+app.use('/api/v1/radar', radarRouter);
 
 // ─── 404 Handler ────────────────────────────
 

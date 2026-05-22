@@ -19,6 +19,21 @@ export interface TriageResponse {
   possibleCategories: string[];
 }
 
+// ─── Radar Types ─────────────────────────────
+
+export interface RadarRequest {
+  city: string;
+  state: string;
+  symptoms?: string;
+  userId?: string;
+}
+
+export interface RadarResponse {
+  riskLevel: RiskLevel;
+  primaryRecommendation: string;
+  suspectedLocalThreat: string | null;
+}
+
 // ─── Chat / Audio Types ─────────────────────
 
 export interface ChatAudioResponse {

@@ -4,8 +4,8 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { geminiService } from '../services/gemini.service';
-import { voskService } from '../services/vosk.service';
+import { openRouterService as aiService } from '../services/openrouter.service';
+import { whisperService } from '../services/whisper.service';
 import { ttsService } from '../services/tts.service';
 import { supabaseService } from '../services/supabase.service';
 import { ChatAudioResponse } from '../types/api.types';
@@ -37,12 +37,9 @@ export const processAudioChat = async (
     const isValidUUID = UUID_REGEX.test(userId);
     const isValidSessionUUID = UUID_REGEX.test(sessionId);
 
-    // Step 1: Transcribe audio using VOSK
-    console.log(`[Chat] Transcribing audio (${language})...`);
-    const transcribedText = await voskService.transcribe(
-      audioFile.buffer,
-      language
-    );
+    // Step 1: Transcribe audio using Local Whisper Model
+    console.log(`[Chat] Transcribing audio with local Whisper (${language})...`);
+    const transcribedText = await whisperService.transcribe(audioFile.buffer, language);
 
     if (!transcribedText || transcribedText.trim().length === 0) {
       throw new AppError(400, 'Could not understand the audio. Please try speaking more clearly.');
@@ -53,27 +50,27 @@ export const processAudioChat = async (
       ? await supabaseService.getChatHistory(sessionId, 10)
       : [];
 
-    // Step 3: Get Gemini response with conversation context
+    // Step 3: Get AI response with conversation context
     console.log(`[Chat] Getting AI response for: "${transcribedText}"`);
-    const geminiResponse = await geminiService.getChatResponse(
+    const aiResponse = await aiService.getChatResponse(
       transcribedText,
       chatHistory.map(msg => ({ role: msg.role, content: msg.content }))
     );
 
     // Step 4: Generate TTS audio from the response
     console.log('[Chat] Generating audio response...');
-    const audioBase64 = await ttsService.textToSpeech(geminiResponse, language);
+    const audioBase64 = await ttsService.textToSpeech(aiResponse, language);
 
     // Step 5: Save both messages to chat history (skip if not valid UUIDs)
     if (isValidUUID && isValidSessionUUID) {
       await supabaseService.saveChatMessage(sessionId, userId, 'user', transcribedText);
-      await supabaseService.saveChatMessage(sessionId, userId, 'model', geminiResponse);
+      await supabaseService.saveChatMessage(sessionId, userId, 'model', aiResponse);
     }
 
     // Build response
     const response: ChatAudioResponse = {
       transcribedText,
-      geminiResponse,
+      geminiResponse: aiResponse, // keeping the property name same to not break frontend
       audioBase64,
     };
 
@@ -110,8 +107,8 @@ export const processTextChat = async (
       ? await supabaseService.getChatHistory(sessionId, 10)
       : [];
 
-    // Get Gemini response
-    const geminiResponse = await geminiService.getChatResponse(
+    // Get AI response
+    const aiResponse = await aiService.getChatResponse(
       message,
       chatHistory.map(msg => ({ role: msg.role, content: msg.content }))
     );
@@ -119,12 +116,12 @@ export const processTextChat = async (
     // Save both messages (skip if not valid UUIDs)
     if (isValidUUID && isValidSessionUUID) {
       await supabaseService.saveChatMessage(sessionId, userId, 'user', message);
-      await supabaseService.saveChatMessage(sessionId, userId, 'model', geminiResponse);
+      await supabaseService.saveChatMessage(sessionId, userId, 'model', aiResponse);
     }
 
     res.json({
       sessionId,
-      response: geminiResponse,
+      response: aiResponse,
     });
   } catch (error) {
     next(error);
