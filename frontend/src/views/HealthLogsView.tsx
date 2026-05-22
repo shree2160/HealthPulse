@@ -21,7 +21,6 @@ const riskConfig: Record<string, { icon: typeof CheckCircle; color: string; bg: 
 const HealthLogsView = () => {
   const { user } = useAuth();
   const [logs, setLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user?.id) {
@@ -45,11 +44,8 @@ const HealthLogsView = () => {
             };
           }));
         }
-        setLoading(false);
       };
       fetchLogs();
-    } else {
-      setLoading(false);
     }
   }, [user]);
   return (
@@ -124,7 +120,7 @@ const HealthLogsView = () => {
                   </div>
                 </div>
                 <div className="hidden sm:flex flex-wrap gap-1.5">
-                  {log.categories.map((cat, i) => (
+                  {log.categories.map((cat: string, i: number) => (
                     <span
                       key={i}
                       className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary/10 text-primary"

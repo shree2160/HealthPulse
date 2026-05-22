@@ -6,7 +6,7 @@ interface StatCardProps {
   value: string | number;
   subtitle?: string;
   trend?: 'up' | 'down' | 'neutral';
-  color?: 'blue' | 'cyan' | 'green' | 'amber';
+  color?: 'blue' | 'cyan' | 'green' | 'amber' | 'red';
 }
 
 const colorMap = {
@@ -29,6 +29,11 @@ const colorMap = {
     bg: 'bg-amber-50',
     icon: 'bg-gradient-to-br from-amber-500 to-amber-600',
     text: 'text-amber-600',
+  },
+  red: {
+    bg: 'bg-red-50',
+    icon: 'bg-gradient-to-br from-red-500 to-red-600',
+    text: 'text-red-600',
   },
 };
 

@@ -160,9 +160,8 @@ const DashboardView = () => {
           {recentLogs.length > 0 ? (
             recentLogs.map((item, i) => {
               let color = 'text-emerald-600';
-              let status = 'Healthy';
-              if (item.risk_level === 'Moderate') { color = 'text-amber-600'; status = 'Caution'; }
-              if (item.risk_level === 'High') { color = 'text-red-600'; status = 'Action Required'; }
+              if (item.risk_level === 'Moderate') { color = 'text-amber-600'; }
+              if (item.risk_level === 'High') { color = 'text-red-600'; }
               
               const date = new Date(item.created_at).toLocaleDateString();
 
